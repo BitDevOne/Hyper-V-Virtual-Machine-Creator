@@ -511,7 +511,7 @@ $removeLinuxDiskButton.Add_Click({
 
 # Function to check SFTP configuration
 function Check-SftpConfiguration {
-    $configFilePath = "$env:USERPROFILE\vm_creator_config.xml"
+    $configFilePath = ".\Settings\windows_config.xml"
     Write-Host "Config file path: $configFilePath"
     if (Test-Path $configFilePath) {
         Write-Host "Config file exists."
@@ -667,7 +667,7 @@ $saveConfigurationButton.Add_Click({
     $xmlDoc.AppendChild($settingsElement)
 
     # Save XML document to file
-    $configFilePath = "$env:USERPROFILE\vm_creator_config.xml"
+    $configFilePath = ".\Settings\windows_config.xml"
     $xmlDoc.Save($configFilePath)
 
     Write-Host "Configuration saved to $configFilePath"
