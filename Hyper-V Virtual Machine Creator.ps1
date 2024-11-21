@@ -755,18 +755,58 @@ function Add-ProvisioningFields {
     $provisioningFieldsPanel.Children.Add($ipAddressStack)
     $ProvisioningControls[$osType]["IPAddress"] = $ipAddressBox
 
-    # DNS Servers
-    $dnsStack = New-Object System.Windows.Controls.StackPanel
-    $dnsStack.Margin = "0,0,0,10"
-    $dnsText = New-Object System.Windows.Controls.TextBlock
-    $dnsText.Text = "DNS Servers:"
-    $dnsText.Margin = "0,0,0,5"
-    $dnsBox = New-Object System.Windows.Controls.TextBox
-    $dnsBox.Width = 200
-    $dnsStack.Children.Add($dnsText)
-    $dnsStack.Children.Add($dnsBox)
-    $provisioningFieldsPanel.Children.Add($dnsStack)
-    $ProvisioningControls[$osType]["DNSServers"] = $dnsBox
+    # Gateway
+    $ipGatewayStack = New-Object System.Windows.Controls.StackPanel
+    $ipGatewayStack.Margin = "0,0,0,10"
+    $ipGatewayText = New-Object System.Windows.Controls.TextBlock
+    $ipGatewayText.Text = "Gateway:"
+    $ipGatewayText.Margin = "0,0,0,5"
+    $ipGatewayBox = New-Object System.Windows.Controls.TextBox
+    $ipGatewayBox.Width = 200
+    $ipGatewayStack.Children.Add($ipGatewayText)
+    $ipGatewayStack.Children.Add($ipGatewayBox)
+    $provisioningFieldsPanel.Children.Add($ipGatewayStack)
+    $ProvisioningControls[$osType]["IPGateway"] = $ipGatewayBox
+
+    # Mask
+    # Subnet Mask
+    $ipMaskStack = New-Object System.Windows.Controls.StackPanel
+    $ipMaskStack.Margin = "0,0,0,10"
+    $ipMaskText = New-Object System.Windows.Controls.TextBlock
+    $ipMaskText.Text = "Subnet Mask:"
+    $ipMaskText.Margin = "0,0,0,5"
+    $ipMaskBox = New-Object System.Windows.Controls.TextBox
+    $ipMaskBox.Width = 200
+    $ipMaskStack.Children.Add($ipMaskText)
+    $ipMaskStack.Children.Add($ipMaskBox)
+    $provisioningFieldsPanel.Children.Add($ipMaskStack)
+    $ProvisioningControls[$osType]["IPMask"] = $ipMaskBox
+
+    # DNS1 Servers
+    $dns1Stack = New-Object System.Windows.Controls.StackPanel
+    $dns1Stack.Margin = "0,0,0,10"
+    $dns1Text = New-Object System.Windows.Controls.TextBlock
+    $dns1Text.Text = "DNS Server 1:"
+    $dns1Text.Margin = "0,0,0,5"
+    $dns1Box = New-Object System.Windows.Controls.TextBox
+    $dns1Box.Width = 200
+    $dns1Stack.Children.Add($dns1Text)
+    $dns1Stack.Children.Add($dns1Box)
+    $provisioningFieldsPanel.Children.Add($dns1Stack)
+    $ProvisioningControls[$osType]["DNSServer1"] = $dns1Box
+
+    # DNS2 Servers
+    $dns2Stack = New-Object System.Windows.Controls.StackPanel
+    $dns2Stack.Margin = "0,0,0,10"
+    $dns2Text = New-Object System.Windows.Controls.TextBlock
+    $dns2Text.Text = "DNS Server 2:"
+    $dns2Text.Margin = "0,0,0,5"
+    $dns2Box = New-Object System.Windows.Controls.TextBox
+    $dns2Box.Width = 200
+    $dns2Stack.Children.Add($dns2Text)
+    $dns2Stack.Children.Add($dns2Box)
+    $provisioningFieldsPanel.Children.Add($dns2Stack)
+    $ProvisioningControls[$osType]["DNSServer2"] = $dns2Box
 
     # Computer Password
     $passwordStack = New-Object System.Windows.Controls.StackPanel
@@ -808,9 +848,12 @@ $createWindowsVmButton.Add_Click({
         if ($selectedIso -ne $null) {
             # Download the ISO file from the SFTP server to a local path
             $configData = Check-SftpConfiguration
+            $SftpServerAddress = $configData.SftpServerAddress
+            $SftpUsername = $configData.SftpUsername
+            $SftpPassword = $configData.SftpPassword
             $localIsoPath = "$vmPath\$selectedIso"
             Write-OutputConsole "Downloading ISO '$selectedIso' from SFTP server..."
-            Get-SftpFile -sftpServer $configData.SftpServerAddress -username $configData.SftpUsername -password $configData.SftpPassword -remoteFilePath $selectedIso -localFilePath $localIsoPath
+            Get-SftpFile -sftpServer $SftpServerAddress -username $SftpUsername -password $SftpPassword -remoteFilePath $selectedIso -localFilePath $localIsoPath
             $isoPath = $localIsoPath
         } else {
             Write-OutputConsole "Please select an ISO file from the dropdown."
@@ -909,6 +952,7 @@ $createWindowsVmButton.Add_Click({
 
                 # Note: Injecting unattend.xml into a VM requires additional steps not covered here.
                 # You may need to use PowerShell Direct or mount the VHD to inject the file.
+                
             }
 
             Write-OutputConsole "Windows VM '$vmName' created successfully."
