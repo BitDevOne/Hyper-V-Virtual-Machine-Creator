@@ -1,6 +1,14 @@
 # Load necessary WPF components
 Add-Type -AssemblyName PresentationFramework
 
+# Sprawdzenie, czy skrypt działa jako administrator
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)) {
+    Write-Host "Skrypt nie został uruchomiony z uprawnieniami administratora. Uruchamianie ponownie jako administrator..."
+    Start-Sleep -Seconds 3
+    Start-Process -FilePath PowerShell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    exit
+}
+
 # Load the Posh-SSH module
 if (-not (Get-Module -ListAvailable -Name Posh-SSH)) {
     Install-Module -Name Posh-SSH -Force -Scope CurrentUser
