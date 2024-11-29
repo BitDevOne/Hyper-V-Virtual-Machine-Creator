@@ -899,6 +899,230 @@ $createWindowsVmButton.Add_Click({
                 Write-OutputConsole "Set VLAN ID to $vlanId."
             }
 
+            # Handle provisioning if enabled
+            if ($doProvisioning) {
+                Write-OutputConsole "Configuring provisioning options..."
+
+                # Generate unattend.xml
+                $unattendPath = "$vmPath\autounattend.xml"
+
+                # Create unattend.xml content
+                $unattendContent = @"
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+  <settings pass="offlineServicing" />
+  <settings pass="windowsPE">
+    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <SetupUILanguage>
+        <UILanguage>pl-PL</UILanguage>
+      </SetupUILanguage>
+      <InputLocale>0415:00000415</InputLocale>
+      <SystemLocale>pl-PL</SystemLocale>
+      <UILanguage>pl-PL</UILanguage>
+      <UserLocale>pl-PL</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <ImageInstall>
+        <OSImage>
+          <InstallTo>
+            <DiskID>0</DiskID>
+            <PartitionID>3</PartitionID>
+          </InstallTo>
+        </OSImage>
+      </ImageInstall>
+      <UserData>
+        <ProductKey>
+          <Key>VK7JG-NPHTM-C97JM-9MPGT-3V66T</Key>
+        </ProductKey>
+        <AcceptEula>true</AcceptEula>
+      </UserData>
+      <RunSynchronous>
+        <RunSynchronousCommand>
+          <Order>1</Order>
+          <Path>cmd.exe /c echo SELECT DISK=0 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>2</Order>
+          <Path>cmd.exe /c echo CLEAN &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>3</Order>
+          <Path>cmd.exe /c echo CONVERT GPT &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>4</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION EFI SIZE=100 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>5</Order>
+          <Path>cmd.exe /c echo FORMAT QUICK FS=FAT32 LABEL="System" &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>6</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION MSR SIZE=16 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>7</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION PRIMARY &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>8</Order>
+          <Path>cmd.exe /c echo FORMAT QUICK FS=NTFS LABEL="Windows" &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>9</Order>
+          <Path>cmd.exe /c diskpart /s X:\diskpart.txt &gt;&gt; X:\diskpart.log</Path>
+        </RunSynchronousCommand>
+      </RunSynchronous>
+    </component>
+  </settings>
+  <settings pass="generalize" />
+  <settings pass="specialize" />
+  <settings pass="auditSystem" />
+  <settings pass="auditUser" />
+  <settings pass="oobeSystem">
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>0415:00000415</InputLocale>
+      <SystemLocale>pl-PL</SystemLocale>
+      <UILanguage>pl-PL</UILanguage>
+      <UserLocale>pl-PL</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <AutoLogon>
+         <Password>
+            <Value>Start123!</Value> 
+            <PlainText>true</PlainText> 
+         </Password>
+         <Username>Administrator</Username> 
+         <Enabled>true</Enabled> 
+         <LogonCount>5</LogonCount> 
+      </AutoLogon>
+      <UserAccounts>
+         <AdministratorPassword>
+            <Value>Start123!</Value> 
+            <PlainText>true</PlainText> 
+         </AdministratorPassword>
+      </UserAccounts>
+	  <FirstLogonCommands>
+        <SynchronousCommand wcm:action="add">
+          <CommandLine>powershell.exe -command "mkdir C:\Skrypty" </CommandLine>
+          <Description>Utworzenie folderu skrypty</Description>
+          <Order>1</Order>
+        </SynchronousCommand>
+        <SynchronousCommand wcm:action="add">
+          <CommandLine>cmd /c curl -o C:\Skrypty\rmm.exe https://api.grupaeuro.eu/clients/8e46e7c3-c298-426a-a05b-df496226f2ba/deploy/</CommandLine>
+          <Description>Utworzenie folderu skrypty</Description>
+          <Order>2</Order>
+        </SynchronousCommand>
+        <SynchronousCommand wcm:action="add">
+          <CommandLine>powershell.exe -command "Start-Process C:\Skrypty\rmm.exe -ArgumentList '-silent' -Wait" </CommandLine>
+          <Description>Utworzenie folderu skrypty</Description>
+          <Order>3</Order>
+        </SynchronousCommand>
+      </FirstLogonCommands>
+      <OOBE>
+        <ProtectYourPC>3</ProtectYourPC>
+        <HideEULAPage>true</HideEULAPage>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+      </OOBE>
+    </component>
+  </settings>
+</unattend>
+"@
+
+                $unattendContent | Out-File -FilePath $unattendPath -Encoding UTF8
+
+                Write-OutputConsole "Created uautounattend at $unattendPath"
+
+                # Inject unattend.xml into the ISO using oscdimg
+                Write-OutputConsole "Injecting autounattend into ISO..."
+
+                # Define the path to oscdimg.exe
+                $oscdimgPath = ".\Tools\Oscdimg\oscdimg.exe"
+
+                if (-not (Test-Path $oscdimgPath)) {
+                    Write-OutputConsole "Oscdimg.exe not found. Please install the Windows ADK."
+                    return
+                }
+
+                # Create a temporary folder to extract the ISO
+                $tempIsoFolder = "$vmPath\TempIsoContent"
+
+                # Ensure the temp folder is empty
+                if (Test-Path $tempIsoFolder) {
+                    Remove-Item $tempIsoFolder -Recurse -Force
+                }
+                New-Item -ItemType Directory -Path $tempIsoFolder | Out-Null
+
+                # Mount the ISO
+                $diskImage = Mount-DiskImage -ImagePath $isoPath -PassThru
+
+                # Get the drive letter of the mounted ISO
+                $driveLetter = ($diskImage | Get-Volume).DriveLetter + ":"
+
+                # Copy the contents of the ISO to the temp folder
+                Write-OutputConsole "Copying ISO contents to temporary folder..."
+                Copy-Item "$driveLetter\*" -Destination $tempIsoFolder -Recurse -Force
+
+                # Dismount the ISO
+                Dismount-DiskImage -ImagePath $isoPath
+
+                # Copy unattend.xml to the sources folder
+                $unattendDestination = "$tempIsoFolder\autounattend.xml"
+                Copy-Item $unattendPath -Destination $unattendDestination -Force
+                Write-OutputConsole "Copied unattend.xml to $unattendDestination"
+
+                # Create new ISO using oscdimg
+                $newIsoPath = "$vmPath\$vmName\CustomInstall.iso"
+
+                # Ensure the directory exists
+                New-Item -ItemType Directory -Path (Split-Path $newIsoPath) -Force | Out-Null
+
+                # Define paths to boot images
+                $bootImage = "$tempIsoFolder\boot\etfsboot.com"
+                $efiBootImage = "$tempIsoFolder\efi\microsoft\boot\efisys.bin"
+
+                if (-not (Test-Path $bootImage)) {
+                    Write-OutputConsole "Boot image not found at $bootImage."
+                    return
+                }
+
+                if (-not (Test-Path $efiBootImage)) {
+                    Write-OutputConsole "EFI boot image not found at $efiBootImage."
+                    return
+                }
+
+                # Build the oscdimg command
+                $oscdimgArguments = @(
+                    "-m",
+                    "-o",
+                    "-u2",
+                    "-udfver102",
+                    "-bootdata:2#p0,e,b$bootImage#pEF,e,b$efiBootImage",
+                    "-lCUSTOM_INSTALL",
+                    "`"$tempIsoFolder`"",
+                    "`"$newIsoPath`""
+                )
+
+                Write-OutputConsole "Creating new ISO with unattend.xml..."
+
+                # Run oscdimg
+                try {
+                    & $oscdimgPath @oscdimgArguments
+                    Write-OutputConsole "New ISO created at $newIsoPath"
+                    # Update $isoPath to point to the new ISO
+                    $isoPath = $newIsoPath
+                } catch {
+                    Write-OutputConsole "Error creating new ISO: $_"
+                    return
+                }
+
+                # Clean up temporary files
+                Write-OutputConsole "Cleaning up temporary files..."
+                Remove-Item $tempIsoFolder -Recurse -Force
+                Remove-Item $unattendPath -Force
+            }
+
             Add-VMDvdDrive -VMName $vmName -Path $isoPath
             Write-OutputConsole "Attached ISO: $isoPath"
 
@@ -932,40 +1156,6 @@ $createWindowsVmButton.Add_Click({
                 Write-OutputConsole "Added additional disk: $additionalDiskPath"
             }
 
-            # Handle provisioning if enabled
-            if ($doProvisioning) {
-                Write-OutputConsole "Configuring provisioning options..."
-
-                # Generate unattend.xml
-                $unattendPath = "$vmPath\unattend.xml"
-
-                # Create unattend.xml content
-                $unattendContent = @"
-<?xml version="1.0" encoding="utf-8"?>
-<unattend xmlns="urn:schemas-microsoft-com:unattend">
-    <settings pass="oobeSystem">
-        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="" versionScope="nonSxS">
-            <UserAccounts>
-                <AdministratorPassword>
-                    <Value>$($computerPassword | ConvertTo-SecureString -AsPlainText -Force | ConvertFrom-SecureString)</Value>
-                    <PlainText>false</PlainText>
-                </AdministratorPassword>
-            </UserAccounts>
-            <ComputerName>$computerName</ComputerName>
-        </component>
-    </settings>
-</unattend>
-"@
-
-                $unattendContent | Out-File -FilePath $unattendPath -Encoding UTF8
-
-                Write-OutputConsole "Created unattend.xml at $unattendPath"
-
-                # Note: Injecting unattend.xml into a VM requires additional steps not covered here.
-                # You may need to use PowerShell Direct or mount the VHD to inject the file.
-                
-            }
-
             Write-OutputConsole "Windows VM '$vmName' created successfully."
         } catch {
             Write-OutputConsole "Error creating VM: $_"
@@ -974,6 +1164,7 @@ $createWindowsVmButton.Add_Click({
         Write-OutputConsole "Please provide valid inputs for all required fields."
     }
 })
+
 
 # Define action for Create Linux VM button
 $createLinuxVmButton.Add_Click({
